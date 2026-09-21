@@ -76,4 +76,52 @@ print(r1.describe())
 print(r1.matches_mid_pair("AGCTTCGA", "TGCAGGTC"))  # True
 print(r1.matches_mid_pair("CGATCGAT", "GCTAGCTA"))  # False
 print(r1.trim_mid_pair("AGCTTCGA", "TGCAGGTC"))     # 20 x "N"
-            
+
+#TASK 3
+import re
+import gzip
+import csv
+import os
+from Bio import SeqIO
+
+class Demultiplexer:
+    def __init__(self, fasta_path, mid_table_path):
+        self.reads = []
+        with gzip.open(fasta_path, "rt") as handle:
+            for record in SeqIO.parse(handle, "fasta"):
+                self.reads.append(SequencingRead(record.id, str(record.seq)))
+
+        self.mids = []
+        with open(mid_table_path, "r") as handle:
+            reader = csv.DictReader(handle, delimiter=";")
+            self.assigned = {}
+            for row in reader:
+                label = f"{row['SampleID']}_{row['Description']}"
+                self.mids.append((label, row['FBarcodeSequence'], row['RBarcodeSequence']))
+                self.assigned[label] = []
+
+        self.unassigned = []
+
+    def assign_reads(self):
+        for read in self.reads:
+            for label, forward_mid, reverse_mid in self.mids:
+                trimmed = read.trim_mid_pair(forward_mid, reverse_mid)
+                if trimmed is not None:
+                    self.assigned[label].append(trimmed)
+                    break
+            else:
+                self.unassigned.append(read)
+
+    def report(self) -> None:
+        report = []
+        for label, reads in self.assigned.items():
+            report.append(f"{label}\t{len(reads)}")
+        report.append(f"Unassigned\t{len(self.unassigned)}")
+        print("\n".join(report))
+        return "\n".join(report)
+
+demux = Demultiplexer("fishes.fna.gz", "fishes_MIDs.csv")
+demux.assign_reads()
+print(demux.report())
+
+
