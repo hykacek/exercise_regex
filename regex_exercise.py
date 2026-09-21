@@ -107,7 +107,7 @@ class Demultiplexer:
             for label, forward_mid, reverse_mid in self.mids:
                 trimmed = read.trim_mid_pair(forward_mid, reverse_mid)
                 if trimmed is not None:
-                    self.assigned[label].append(trimmed)
+                    self.assigned[label].append(SequencingRead(f"{read.read_id}", trimmed))
                     break
             else:
                 self.unassigned.append(read)
@@ -120,8 +120,19 @@ class Demultiplexer:
         print("\n".join(report))
         return "\n".join(report)
 
+    def write_fasta(self, output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+        for label, reads in self.assigned.items():
+            if reads:
+                output_path = os.path.join(output_dir, f"{label}.fasta")
+                with open(output_path, "w") as file:
+                    for r in reads:
+                        file.write(f">{r.read_id}\n{r.sequence}\n")        
+
 demux = Demultiplexer("fishes.fna.gz", "fishes_MIDs.csv")
 demux.assign_reads()
 print(demux.report())
+demux.write_fasta("demux_output")
+
 
 
