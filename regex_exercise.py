@@ -1,4 +1,6 @@
-#TASK 1
+from __future__ import annotations
+
+# TASK 1
 import re
 
 log_lines = [
@@ -27,7 +29,7 @@ for line in log_lines:
 print(ipv4)
 
 for line in log_lines:
-    if re.search(r"42s", line):
+    if re.search(r"\d+s$", line):
         print(line)
 
 for line in log_lines:
@@ -36,3 +38,42 @@ for line in log_lines:
 
 if re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} (INFO|ERROR|WARNING|DEBUG) .+", log_lines[0]):
     print("The log is correctly formatted.")
+
+#TASK 2
+import re
+
+def reverse_complement(seq) -> str:
+    seq = seq[::-1]
+    table = str.maketrans("ATCG", "TAGC")
+    complemented = seq.translate(table)
+    return complemented
+
+class SequencingRead:
+    def __init__(self,read_id, sequence):
+        self.read_id = read_id
+        self.sequence = sequence
+    
+    def matches_mid_pair(self, forward_mid, reverse_mid) -> bool:
+        reverse_mid = reverse_complement(reverse_mid)
+        if re.search(fr"^{forward_mid}", self.sequence) and re.search(fr"{reverse_mid}$", self.sequence):
+            return True
+        return False
+
+    def trim_mid_pair(self, forward_mid, reverse_mid) -> str | None:
+        if self.matches_mid_pair(forward_mid, reverse_mid) == True:
+            reverse_mid = reverse_complement(reverse_mid)
+            trimmed_sequence = re.sub(fr"^{forward_mid}", "", self.sequence)
+            trimmed_sequence = re.sub(fr"{reverse_mid}$", "", trimmed_sequence)
+            return trimmed_sequence
+        return None
+    
+    def describe(self) -> str:
+        length = len(self.sequence)
+        return f"SequencingRead {self.read_id} {length}bp"
+
+r1 = SequencingRead("demo_1", "AGCTTCGA" + "N" * 20 + reverse_complement("TGCAGGTC"))
+print(r1.describe())
+print(r1.matches_mid_pair("AGCTTCGA", "TGCAGGTC"))  # True
+print(r1.matches_mid_pair("CGATCGAT", "GCTAGCTA"))  # False
+print(r1.trim_mid_pair("AGCTTCGA", "TGCAGGTC"))     # 20 x "N"
+            
